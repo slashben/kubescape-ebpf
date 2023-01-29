@@ -60,6 +60,15 @@ struct syscalls_exit_openat_args
     long ret;
 };
 
+struct syscalls_enter_execve_args
+{
+    unsigned long long unused;
+    long syscall_nr;
+    const char* file_name;
+    const char* const* argv;
+	const char* const* envp;
+};
+
 void add_common_event_info(struct event *task_info) {
 	struct task_struct *task;	
 	task = (struct task_struct*) bpf_get_current_task();
@@ -110,6 +119,28 @@ int sys_enter_open(struct syscalls_enter_open_args *ctx) {
 	// Call specific
 	task_info->syscall_nr = ctx->syscall_nr;
 	bpf_probe_read_user_str(task_info->path, sizeof(task_info->path),(char*)ctx->filename_ptr);
+
+	// Submit
+	bpf_ringbuf_submit(task_info, 0);
+
+	return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_execve")
+int sys_enter_execve(struct syscalls_enter_execve_args *ctx) {
+	struct event *task_info;
+
+	task_info = bpf_ringbuf_reserve(&events, sizeof(struct event), 0);
+	if (!task_info) {
+		return 0;
+	}
+
+	// Common data
+	add_common_event_info(task_info);
+
+	// Call specific
+	task_info->syscall_nr = ctx->syscall_nr;
+	bpf_probe_read_user_str(task_info->path, sizeof(task_info->path),(char*)ctx->file_name);
 
 	// Submit
 	bpf_ringbuf_submit(task_info, 0);
