@@ -36,6 +36,7 @@ type FileActivityEvent struct {
 	Pid       int
 	Cgroup    uint64
 	File      string
+	Comm      string
 	Operation FileOperation
 }
 
@@ -131,6 +132,7 @@ func (fam *FileActivityMonitor) Start() {
 					Cgroup:    event.Cgroupid,
 					Timestamp: uint64(event.Timestamp),
 					File:      unix.ByteSliceToString(event.Path[:]),
+					Comm:      unix.ByteSliceToString(event.Comm[:]),
 					Operation: FileOperation(event.SyscallNr),
 				}
 				fam.client.Notify(e)
