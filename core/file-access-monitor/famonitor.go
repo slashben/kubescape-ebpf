@@ -31,7 +31,9 @@ const (
 )
 
 type FileActivityEvent struct {
-	Pid       uint32
+	Timestamp uint64
+	NsMntId   uint64
+	Pid       int
 	Cgroup    uint64
 	File      string
 	Operation FileOperation
@@ -124,8 +126,10 @@ func (fam *FileActivityMonitor) Start() {
 			err = binary.Read(bytes.NewBuffer(record.RawSample), binary.LittleEndian, &event)
 			if err == nil {
 				e := FileActivityEvent{
-					Pid:       event.Pid,
-					Cgroup:    0,
+					NsMntId:   uint64(event.MntnsId),
+					Pid:       int(event.Pid),
+					Cgroup:    event.Cgroupid,
+					Timestamp: uint64(event.Timestamp),
 					File:      unix.ByteSliceToString(event.Path[:]),
 					Operation: FileOperation(event.SyscallNr),
 				}
