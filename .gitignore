@@ -1,2 +1,4 @@
-**/bpf_bpfel.*
-**/bpf_bpfeb.*
+.vscode
+filemon
+#**/bpf_bpfel.*
+#**/bpf_bpfeb.*
