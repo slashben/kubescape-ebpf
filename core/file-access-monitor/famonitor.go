@@ -35,6 +35,7 @@ type FileActivityEvent struct {
 	NsMntId   uint64
 	Pid       int
 	Cgroup    uint64
+	Dirfd     int
 	File      string
 	Comm      string
 	Operation FileOperation
@@ -129,9 +130,9 @@ func (fam *FileActivityMonitor) Start() {
 				e := FileActivityEvent{
 					NsMntId:   uint64(event.MntnsId),
 					Pid:       int(event.Pid),
-					Cgroup:    event.Cgroupid,
 					Timestamp: uint64(event.Timestamp),
 					File:      unix.ByteSliceToString(event.Path[:]),
+					Dirfd:     int(event.Dirfd),
 					Comm:      unix.ByteSliceToString(event.Comm[:]),
 					Operation: FileOperation(event.SyscallNr),
 				}

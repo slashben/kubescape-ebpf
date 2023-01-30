@@ -16,7 +16,6 @@ struct event {
 	u8 comm[16];
 	u32 pid;
 	u32 ppid;
-	u64 cgroupid;
 	u32 dirfd;
 	u8 path[PATH_MAX];
 };
@@ -69,6 +68,17 @@ struct syscalls_enter_execve_args
 	const char* const* envp;
 };
 
+struct syscalls_enter_execveat_args
+{
+    unsigned long long unused;
+    long syscall_nr;
+	int dirfd;
+    const char* file_name;
+    const char* const* argv;
+	const char* const* envp;
+	int flags;
+};
+
 void add_common_event_info(struct event *task_info) {
 	struct task_struct *task;	
 	task = (struct task_struct*) bpf_get_current_task();
@@ -77,10 +87,10 @@ void add_common_event_info(struct event *task_info) {
 	task_info->mntns_id = (u64) BPF_CORE_READ(task, nsproxy, mnt_ns, ns.inum);
 	task_info->pid = bpf_get_current_pid_tgid() >> 32;
 	task_info->ppid = 0; 
-	task_info->cgroupid = bpf_get_current_cgroup_id();
 	bpf_get_current_comm(&task_info->comm, 16);
 	task_info->comm[15] = 0;
 }
+
 
 SEC("tracepoint/syscalls/sys_enter_openat")
 int sys_enter_openat(struct syscalls_enter_openat_args *ctx) {
@@ -96,6 +106,7 @@ int sys_enter_openat(struct syscalls_enter_openat_args *ctx) {
 
 	// Call specific
 	task_info->syscall_nr = ctx->syscall_nr;
+	task_info->dirfd = ctx->dirfd;
 	bpf_probe_read_user_str(task_info->path, sizeof(task_info->path),(char*)ctx->filename_ptr);
 
 	// Submit to ring buffer
@@ -118,6 +129,7 @@ int sys_enter_open(struct syscalls_enter_open_args *ctx) {
 
 	// Call specific
 	task_info->syscall_nr = ctx->syscall_nr;
+	task_info->dirfd = -1;
 	bpf_probe_read_user_str(task_info->path, sizeof(task_info->path),(char*)ctx->filename_ptr);
 
 	// Submit
@@ -125,6 +137,7 @@ int sys_enter_open(struct syscalls_enter_open_args *ctx) {
 
 	return 0;
 }
+
 
 SEC("tracepoint/syscalls/sys_enter_execve")
 int sys_enter_execve(struct syscalls_enter_execve_args *ctx) {
@@ -140,6 +153,30 @@ int sys_enter_execve(struct syscalls_enter_execve_args *ctx) {
 
 	// Call specific
 	task_info->syscall_nr = ctx->syscall_nr;
+	task_info->dirfd = -1;
+	bpf_probe_read_user_str(task_info->path, sizeof(task_info->path),(char*)ctx->file_name);
+
+	// Submit
+	bpf_ringbuf_submit(task_info, 0);
+
+	return 0;
+}
+
+SEC("tracepoint/syscalls/sys_enter_execveat")
+int sys_enter_execveat(struct syscalls_enter_execveat_args *ctx) {
+	struct event *task_info;
+
+	task_info = bpf_ringbuf_reserve(&events, sizeof(struct event), 0);
+	if (!task_info) {
+		return 0;
+	}
+
+	// Common data
+	add_common_event_info(task_info);
+
+	// Call specific
+	task_info->syscall_nr = ctx->syscall_nr;
+	task_info->dirfd = ctx->dirfd;
 	bpf_probe_read_user_str(task_info->path, sizeof(task_info->path),(char*)ctx->file_name);
 
 	// Submit
