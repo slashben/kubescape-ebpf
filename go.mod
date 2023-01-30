@@ -1,4 +1,4 @@
-module kubescape-ebpf
+module github.com/slashben/kubescape-ebpf
 
 go 1.19
 
