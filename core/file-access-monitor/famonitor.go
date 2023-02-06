@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"syscall"
 
-	"kubescape-ebpf/core/common"
+	"github.com/slashben/kubescape-ebpf/core/common"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
